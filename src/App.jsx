@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, PlusCircle, LayoutGrid, Clock, Users, Save, FolderOpen, FileJson, AlertTriangle, HardDrive, Download, ChevronRight, X, Calendar } from 'lucide-react';
+import { Search, PlusCircle, LayoutGrid, Clock, Users, Save, FolderOpen, FileJson, AlertTriangle, HardDrive, Download, ChevronRight, X, Calendar, Edit2, Zap } from 'lucide-react';
 
 // --- 檔案系統 API 封裝 ---
 const FileSystem = {
@@ -85,21 +85,45 @@ const WelcomeView = ({ onOpen, onNew, isSupported }) => (
     </div>
 );
 
-// 2. 專案查詢列表
-const ProjectInquiryView = ({ projects }) => {
+// 2. 專案查詢列表 (已改為橫式條列/表格)
+const ProjectInquiryView = ({ projects, onEdit }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const filtered = projects.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     (p.client && p.client.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+  
+  // 格式化日期，避免顯示 '2023-12-30'
+  const formatDate = (dateString) => {
+    if (!dateString) return '--';
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      return `${parts[1]}/${parts[2]}`; // 顯示 月/日
+    }
+    return dateString;
+  };
+
+  const getStatusClasses = (status) => {
+    switch (status) {
+      case '進行中':
+        return 'bg-emerald-100 text-emerald-700 ring-emerald-500/20';
+      case '已完成':
+        return 'bg-blue-100 text-blue-700 ring-blue-500/20';
+      case '暫停':
+        return 'bg-amber-100 text-amber-700 ring-amber-500/20';
+      default:
+        return 'bg-slate-100 text-slate-600 ring-slate-500/20';
+    }
+  };
+
 
   return (
     <div className="glass-panel w-full h-full flex flex-col rounded-3xl shadow-xl border border-white/50 overflow-hidden animate-fade-in">
-      <div className="p-6 md:p-8 border-b border-slate-100 bg-white/50 backdrop-blur-md">
+      <div className="p-6 md:p-8 border-b border-slate-100 bg-white/50 backdrop-blur-md flex-shrink-0">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
             <div>
-                <h2 className="text-3xl font-extrabold text-slate-800 mb-2 tracking-tight">專案列表</h2>
-                <p className="text-slate-500 font-medium">檢視並管理所有進行中的工程案件</p>
+                <h2 className="text-3xl font-extrabold text-slate-800 mb-2 tracking-tight">工程案橫式查詢</h2>
+                <p className="text-slate-500 font-medium">快速總覽所有工程案的關鍵時程與進度</p>
             </div>
             <div className="flex items-center text-slate-500 font-mono text-sm bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
@@ -110,7 +134,7 @@ const ProjectInquiryView = ({ projects }) => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={20} />
             <input 
                 type="text" 
-                placeholder="搜尋專案名稱、客戶..." 
+                placeholder="輸入關鍵字搜尋工程案 (名稱、客戶)..." 
                 className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all text-lg placeholder:text-slate-300" 
                 value={searchTerm} 
                 onChange={e => setSearchTerm(e.target.value)} 
@@ -118,48 +142,88 @@ const ProjectInquiryView = ({ projects }) => {
         </div>
       </div>
       
-      <div className="flex-1 overflow-auto p-6 md:p-8 bg-slate-50/50">
-        {filtered.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/30 min-h-[300px]">
-                <FileJson size={64} className="mb-4 text-slate-300" />
-                <p className="text-lg font-medium">沒有找到符合的專案</p>
-            </div>
-        ) : (
-            // 修正：調整 grid-cols 以更靈活適應寬度，支援到 2xl 螢幕顯示 4 欄
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-                {filtered.map(p => (
-                    <div key={p.id} className="group p-6 bg-white border border-slate-100 rounded-2xl hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-emerald-500/30 transition-all duration-300 relative flex flex-col h-full">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="bg-slate-100 text-slate-500 px-3 py-1 rounded-lg text-xs font-mono font-bold tracking-wider mb-2 inline-block">{p.id}</div>
-                            <span className={`px-3 py-1 text-xs rounded-full font-bold shadow-sm ${
-                                p.status === '進行中' ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-500/20' : 
-                                p.status === '已完成' ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-500/20' : 
-                                p.status === '暫停' ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-500/20' :
-                                'bg-slate-100 text-slate-600 ring-1 ring-slate-500/20'
-                            }`}>{p.status}</span>
-                        </div>
-                        <h3 className="font-bold text-xl text-slate-800 group-hover:text-emerald-700 transition-colors mb-3 line-clamp-1">{p.name}</h3>
-                        <div className="text-slate-500 text-sm mb-6 space-y-2">
-                             <p className="flex items-center"><Users size={16} className="mr-2 opacity-50"/> {p.client || '未指定客戶'}</p>
-                             <p className="flex items-center text-xs font-mono"><Calendar size={16} className="mr-2 opacity-50"/><span className="bg-slate-50 px-1 rounded">{p.startDate || '--'}</span><span className="mx-2 text-slate-300">→</span><span className="bg-slate-50 px-1 rounded">{p.endDate || '--'}</span></p>
-                        </div>
-                        <div className="mt-auto pt-4 border-t border-slate-50">
-                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">進度</span>
-                                <span className="text-sm font-bold text-emerald-600">{p.progress || 0}%</span>
-                             </div>
-                             <div className="w-full bg-slate-100 rounded-full h-2 mb-4 overflow-hidden">
-                                <div className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-2 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(16,185,129,0.4)]" style={{width: `${p.progress || 0}%`}}></div>
-                             </div>
-                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-400 text-xs">專案預算</span>
-                                <span className="font-mono font-bold text-slate-700 bg-slate-50 px-2 py-1 rounded">NT$ {parseInt(p.budget || 0).toLocaleString()}</span>
-                             </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        )}
+      <div className="flex-1 overflow-auto p-0 bg-slate-50/50">
+        <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider min-w-[100px]">編號</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider min-w-[250px]">工程案名稱</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider min-w-[150px]">客戶</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider min-w-[120px]">時程</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider min-w-[100px]">狀態</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider min-w-[150px]">進度</th>
+                        <th className="px-6 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider min-w-[150px]">預算 (NT$)</th>
+                        <th className="px-6 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider min-w-[80px]">操作</th> {/* 新增：操作欄位 */}
+                    </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                    {filtered.length > 0 ? (
+                        filtered.map(p => (
+                            <tr key={p.id} className="hover:bg-emerald-50/50 transition-colors cursor-pointer">
+                                {/* 編號 */}
+                                <td className="px-6 py-4 whitespace-nowrap text-xs font-mono text-emerald-600">{p.id}</td>
+                                
+                                {/* 工程案名稱 */}
+                                <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                                    <div className="max-w-xs truncate" title={p.name}>{p.name}</div>
+                                </td>
+                                
+                                {/* 客戶 */}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{p.client || '--'}</td>
+                                
+                                {/* 時程 (起訖日期) */}
+                                <td className="px-6 py-4 whitespace-nowrap text-xs font-mono text-slate-600">
+                                    {formatDate(p.startDate)} → {formatDate(p.endDate)}
+                                </td>
+                                
+                                {/* 狀態 */}
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 ${getStatusClasses(p.status)}`}>
+                                        {p.status}
+                                    </span>
+                                </td>
+                                
+                                {/* 進度條 */}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-24 bg-slate-200 rounded-full h-2 overflow-hidden">
+                                            <div className="bg-emerald-500 h-2 rounded-full" style={{width: `${p.progress || 0}%`}}></div>
+                                        </div>
+                                        <span className="text-xs font-bold text-slate-600">{p.progress || 0}%</span>
+                                    </div>
+                                </td>
+                                
+                                {/* 預算 */}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-right text-slate-700">
+                                    NT$ {parseInt(p.budget || 0).toLocaleString()}
+                                </td>
+                                
+                                {/* 操作 (新增：編輯按鈕) */}
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                    <button 
+                                        onClick={() => onEdit(p)}
+                                        className="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-100 transition-colors"
+                                        title="編輯專案"
+                                    >
+                                        <Edit2 size={16} />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="8" className="px-6 py-12 text-center text-slate-400">
+                                <div className="flex flex-col items-center">
+                                    <FileJson size={48} className="mb-3 opacity-50" />
+                                    <p>無工程案資料或無符合的查詢結果。</p>
+                                </div>
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
       </div>
     </div>
   );
@@ -182,8 +246,7 @@ const ProjectAddView = ({ onAdd }) => {
             </div>
             
             <div className="glass-panel p-8 rounded-b-3xl md:rounded-3xl shadow-xl border border-white/50 flex-grow overflow-auto">
-                {/* 修正：移除了 max-w-4xl，改用 w-full 讓表單能隨視窗擴展 */}
-                <form onSubmit={handleSubmit} className="space-y-8 w-full mx-auto">
+                <form onSubmit={handleSubmit} className="space-y-8 w-full max-w-4xl mx-auto">
                     <div className="space-y-6">
                         <div><label className={labelStyle}>專案名稱 <span className="text-red-400">*</span></label><input required type="text" placeholder="例如：2025年度廠房擴建工程" className={inputStyle} value={form.name} onChange={e => setForm({...form, name: e.target.value})} /></div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -212,7 +275,7 @@ const ProjectAddView = ({ onAdd }) => {
 
 // 4. 其他頁面
 const TimeEntryView = () => (
-    <div className="h-full flex flex-col items-center justify-center glass-panel rounded-3xl border border-white/50 p-8 text-center shadow-xl animate-fade-in">
+    <div className="h-full w-full flex flex-col items-center justify-center glass-panel rounded-3xl border border-white/50 p-8 text-center shadow-xl animate-fade-in">
         <div className="bg-slate-50 p-8 rounded-full mb-6"><Clock size={64} className="text-slate-300" /></div>
         <h3 className="text-2xl font-extrabold text-slate-700 mb-3">工時填報模組</h3>
         <p className="text-slate-500 max-w-md text-lg leading-relaxed">此功能開發中。<br/>未來將允許針對特定專案填報每日工時，資料同樣會儲存在您的 JSON 檔案中。</p>
@@ -220,14 +283,97 @@ const TimeEntryView = () => (
 );
 
 const ReportsView = () => (
-    <div className="h-full flex flex-col items-center justify-center glass-panel rounded-3xl border border-white/50 p-8 text-center shadow-xl animate-fade-in">
+    <div className="h-full w-full flex flex-col items-center justify-center glass-panel rounded-3xl border border-white/50 p-8 text-center shadow-xl animate-fade-in">
         <div className="bg-slate-50 p-8 rounded-full mb-6"><LayoutGrid size={64} className="text-slate-300" /></div>
         <h3 className="text-2xl font-extrabold text-slate-700 mb-3">統計報表模組</h3>
         <p className="text-slate-500 max-w-md text-lg leading-relaxed">此功能將讀取您的 JSON 檔案，自動生成預算執行率與進度甘特圖。</p>
     </div>
 );
 
-// --- Sidebar 元件 ---
+// --- 編輯專案 Modal 元件 (新元件) ---
+const EditProjectModal = ({ project, onUpdate, onClose }) => {
+    const [form, setForm] = useState(project);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setForm(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onUpdate(form); // 傳遞更新後的表單資料
+    };
+
+    const inputStyle = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium text-slate-700";
+    const labelStyle = "block text-sm font-bold text-slate-600 mb-2 ml-1";
+
+    return (
+        // 遮罩層
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl transform scale-100 transition-all duration-300 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center">
+                        <Edit2 className="w-5 h-5 mr-3 text-blue-600" /> 
+                        編輯專案: {project.id}
+                    </h3>
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-200 transition-colors">
+                        <X size={20} className="text-slate-500" />
+                    </button>
+                </div>
+
+                <div className="p-6 max-h-[80vh] overflow-y-auto">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* 專案名稱 */}
+                        <div><label className={labelStyle}>專案名稱 *</label><input required type="text" name="name" className={inputStyle} value={form.name} onChange={handleChange} /></div>
+                        
+                        {/* 客戶與預算 */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><label className={labelStyle}>客戶名稱</label><input type="text" name="client" className={inputStyle} value={form.client} onChange={handleChange} /></div>
+                            <div><label className={labelStyle}>預算金額 (NT$)</label><input required type="number" name="budget" className={inputStyle} value={form.budget} onChange={handleChange} /></div>
+                        </div>
+
+                        {/* 起訖日期 */}
+                        <div className="grid grid-cols-2 gap-4">
+                             <div><label className={labelStyle}>起始日期</label><input type="date" name="startDate" className={inputStyle} value={form.startDate} onChange={handleChange} /></div>
+                             <div><label className={labelStyle}>預計結束日期</label><input type="date" name="endDate" className={inputStyle} value={form.endDate} onChange={handleChange} /></div>
+                        </div>
+
+                        {/* 狀態與進度 */}
+                        <div className="grid grid-cols-2 gap-4 items-center">
+                            <div>
+                                <label className={labelStyle}>狀態</label>
+                                <select name="status" className={inputStyle} value={form.status} onChange={handleChange}>
+                                    <option>未開始</option><option>進行中</option><option>暫停</option><option>已完成</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelStyle}>進度 (%)</label>
+                                <div className="flex items-center space-x-3">
+                                    <input type="range" name="progress" min="0" max="100" className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500" value={form.progress} onChange={handleChange} />
+                                    <span className="font-mono font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg min-w-[3.5rem] text-center">{form.progress}%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 備註說明 */}
+                        <div><label className={labelStyle}>備註說明</label><textarea rows="3" name="description" placeholder="輸入詳細描述..." className={inputStyle} value={form.description} onChange={handleChange}></textarea></div>
+                    
+                        {/* 儲存按鈕 */}
+                        <div className="pt-4 border-t border-slate-100 flex justify-end space-x-3">
+                            <button type="button" onClick={onClose} className="px-6 py-3 rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">取消</button>
+                            <button type="submit" className="px-6 py-3 rounded-xl text-white bg-blue-600 hover:bg-blue-700 transition-colors font-bold flex items-center shadow-lg shadow-blue-200">
+                                <Zap size={20} className="mr-2"/> 更新專案
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Sidebar 元件 (保持不變) ---
 const Sidebar = ({ currentView, setCurrentView, fileName, isUnsaved, onOpenFile, onNewFile, onSaveFile, statusMsg }) => {
   const navItems = [
     { id: 'inquiry', label: '工程案查詢', icon: Search },
@@ -313,11 +459,17 @@ const Sidebar = ({ currentView, setCurrentView, fileName, isUnsaved, onOpenFile,
 const App = () => {
   const [currentView, setCurrentView] = useState('welcome');
   const [projects, setProjects] = useState([]);
+  
+  // 檔案狀態
   const [fileHandle, setFileHandle] = useState(null);
   const [fileName, setFileName] = useState(null);
   const [isUnsaved, setIsUnsaved] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const [isSupported] = useState(FileSystem.isSupported());
+
+  // 編輯 Modal 狀態
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null); // 儲存目前正在編輯的專案
 
   useEffect(() => {
     if (!document.querySelector('#tailwind-cdn')) {
@@ -401,11 +553,29 @@ const App = () => {
     setProjects(newProjects);
     setIsUnsaved(true);
   };
+  
+  // 新增：處理編輯 Modal 的開啟
+  const handleOpenEditModal = (project) => {
+    setEditingProject(project);
+    setIsModalOpen(true);
+  };
+
+  // 新增：處理專案更新
+  const handleUpdateProject = (updatedProject) => {
+    const newProjects = projects.map(p => 
+      p.id === updatedProject.id ? updatedProject : p
+    );
+    updateProjects(newProjects);
+    setIsModalOpen(false);
+    setEditingProject(null);
+    setStatusMsg(`專案 ${updatedProject.id} 已更新，請儲存檔案！`);
+  };
 
   const renderContent = () => {
     switch (currentView) {
       case 'inquiry': 
-        return <ProjectInquiryView projects={projects} />;
+        // 傳遞 handleOpenEditModal 給查詢列表
+        return <ProjectInquiryView projects={projects} onEdit={handleOpenEditModal} />;
       case 'add': 
         return <ProjectAddView onAdd={(p) => {
             const newP = { ...p, id: `PRJ-${Date.now().toString().slice(-6)}`, createdAt: new Date().toISOString() };
@@ -432,11 +602,19 @@ const App = () => {
         onOpenFile={handleOpenFile} onNewFile={handleNewFile} onSaveFile={handleSaveFile}
       />
       <main className="flex-1 flex flex-col bg-slate-100/50 relative overflow-hidden">
-        {/* 這裡修正了佈局：使用 flex 和 overflow-auto 讓內容區塊自動適應剩餘寬度，而非使用 absolute */}
         <div className="flex-1 overflow-auto p-4 md:p-8 w-full">
             {renderContent()}
         </div>
       </main>
+      
+      {/* 編輯專案 Modal */}
+      {isModalOpen && editingProject && (
+        <EditProjectModal 
+          project={editingProject} 
+          onUpdate={handleUpdateProject} 
+          onClose={() => setIsModalOpen(false)} 
+        />
+      )}
     </div>
   );
 };
