@@ -143,8 +143,7 @@ const ProjectInquiryView = ({ projects, onEdit }) => {
                         <th className="px-6 py-3 text-left w-32">契約編號</th>
                         <th className="px-6 py-3 text-left w-32">執行現況</th>
                         <th className="px-6 py-3 text-left min-w-[400px]">工程名稱</th>
-                        {/* 修正：寬度從 w-24 增加到 w-32 (約30%) */}
-                        <th className="px-6 py-3 text-left w-32">工程類別</th>
+                        <th className="px-6 py-3 text-left w-40">工程類別</th>
                         <th className="px-6 py-3 text-center min-w-[100px]">檢視/編輯</th>
                     </tr>
                 </thead>
@@ -371,9 +370,11 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
     const [selectedProject, setSelectedProject] = useState(null);
     const [detailProject, setDetailProject] = useState(null);
 
+    // 修改：過濾邏輯增加 status 判斷
     const filteredProjects = projects.filter(p => 
-        (p.projectId && p.projectId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.projectName && p.projectName.toLowerCase().includes(searchTerm.toLowerCase()))
+        ((p.projectId && p.projectId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.projectName && p.projectName.toLowerCase().includes(searchTerm.toLowerCase()))) &&
+        (p.status === '施工中' || p.status === '主體完工')
     );
 
     const calculateRemaining = (project) => {
@@ -421,23 +422,20 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
             <div className="flex-1 overflow-auto p-0 bg-slate-50/50">
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200">
-                        {/* 修改字體大小為 text-xs */}
+                        {/* 修正字體大小與欄位寬度 */}
                         <thead className="bg-slate-100 sticky top-0 z-10 text-xs font-bold uppercase tracking-wider text-slate-600">
                             <tr>
                                 <th className="px-4 py-3 text-left">工程編號</th>
                                 <th className="px-4 py-3 text-left min-w-[150px]">工程名稱</th>
-                                {/* 加寬施工方式 */}
-                                <th className="px-4 py-3 text-left min-w-[100px]">施工方式</th>
-                                {/* 加寬施工現況，並改名 */}
-                                <th className="px-4 py-3 text-left min-w-[80px]">施工現況</th>
-                                {/* 縮減食宿欄位，加入換行 */}
-                                <th className="px-1 py-3 text-right bg-blue-50 text-blue-800 w-18">剩餘食宿<br/>(施工.本地)</th>
-                                <th className="px-1 py-3 text-right bg-blue-50 text-blue-800 w-18">剩餘食宿<br/>(施工.外地)</th>
-                                <th className="px-1 py-3 text-right bg-green-50 text-green-800 w-18">剩餘食宿<br/>(監工.本地)</th>
-                                <th className="px-1 py-3 text-right bg-green-50 text-green-800 w-18">剩餘食宿<br/>(監工.外地)</th>
-                                {/* 縮減加班欄位，加入換行 */}
-                                <th className="px-1 py-3 text-right bg-orange-50 text-orange-800 w-18">剩餘加班<br/>(施工)</th>
-                                <th className="px-1 py-3 text-right bg-orange-50 text-orange-800 w-18">剩餘加班<br/>(監工)</th>
+                                <th className="px-4 py-3 text-left min-w-[130px]">施工方式</th>
+                                <th className="px-4 py-3 text-left min-w-[160px]">施工現況</th>
+                                {/* 縮減食宿與加班欄位寬度，使用 w-20 並保留換行 */}
+                                <th className="px-1 py-3 text-right bg-blue-50 text-blue-800 w-20">剩餘食宿<br/>(施工.本地)</th>
+                                <th className="px-1 py-3 text-right bg-blue-50 text-blue-800 w-20">剩餘食宿<br/>(施工.外地)</th>
+                                <th className="px-1 py-3 text-right bg-green-50 text-green-800 w-20">剩餘食宿<br/>(監工.本地)</th>
+                                <th className="px-1 py-3 text-right bg-green-50 text-green-800 w-20">剩餘食宿<br/>(監工.外地)</th>
+                                <th className="px-1 py-3 text-right bg-orange-50 text-orange-800 w-20">剩餘加班<br/>(施工)</th>
+                                <th className="px-1 py-3 text-right bg-orange-50 text-orange-800 w-20">剩餘加班<br/>(監工)</th>
                                 <th className="px-4 py-3 text-left min-w-[200px]">備註</th>
                                 <th className="px-4 py-3 text-center">申報</th>
                                 <th className="px-4 py-3 text-center">動支明細</th>
@@ -452,7 +450,7 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
                                         <td className="px-4 py-3 font-medium text-slate-900">{p.projectName}</td>
                                         <td className="px-4 py-3 text-slate-600">{p.method}</td>
                                         <td className="px-4 py-3 text-slate-600">{p.status}</td>
-                                        {/* 縮減顯示，恢復 text-sm */}
+                                        {/* 內容文字大小恢復為 text-sm */}
                                         <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingConstructionLocal < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingConstructionLocal}</td>
                                         <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingConstructionForeign < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingConstructionForeign}</td>
                                         <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingSupervisionLocal < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingSupervisionLocal}</td>
@@ -746,9 +744,9 @@ const EmployeeManagementView = ({ employees, onAddEmployee, onDeleteEmployee }) 
                         <thead className="bg-slate-100 sticky top-0 z-10 text-xs font-bold uppercase tracking-wider text-slate-600">
                             <tr>
                                 {/* 加寬員工編號欄位 */}
-                                <th className="px-6 py-3 text-left min-w-[200px]">員工編號</th>
+                                <th className="px-6 py-3 text-left min-w-[300px]">員工編號</th>
                                 {/* 加寬員工姓名欄位 */}
-                                <th className="px-6 py-3 text-left min-w-[200px]">員工姓名</th>
+                                <th className="px-6 py-3 text-left min-w-[300px]">員工姓名</th>
                                 <th className="px-6 py-3 text-center">刪除</th>
                             </tr>
                         </thead>
@@ -758,6 +756,7 @@ const EmployeeManagementView = ({ employees, onAddEmployee, onDeleteEmployee }) 
                                     <td className="px-6 py-4 font-mono text-emerald-600 font-medium">{emp.id}</td>
                                     <td className="px-6 py-4 font-medium text-slate-900">{emp.name}</td>
                                     <td className="px-6 py-4 text-center">
+                                        {/* 修改：按鈕改為垃圾桶圖示與刪除功能 */}
                                         <button onClick={() => handleDelete(emp.id)} className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 transition-colors" title="刪除">
                                             <Trash2 size={18} />
                                         </button>
@@ -855,7 +854,7 @@ const Sidebar = ({ currentView, setCurrentView, fileName, isUnsaved, onOpenFile,
     <div className="flex flex-col w-64 bg-slate-900 text-white shadow-2xl h-full p-4 flex-shrink-0 z-20">
       <div className="flex items-center space-x-3 p-3 mb-8 border-b border-slate-700">
         <div className="bg-emerald-500/20 p-2 rounded-lg"><Users className="w-6 h-6 text-emerald-400" /></div>
-        <div><h1 className="text-lg font-bold tracking-wider">工程管理</h1><span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400 border border-slate-600">CPM V1.1</span></div>
+        <div><h1 className="text-lg font-bold tracking-wider">工程管理</h1><span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400 border border-slate-600">CPM V1.2</span></div>
       </div>
 
       <div className="mb-6 p-4 bg-slate-800 rounded-xl border border-slate-700">
