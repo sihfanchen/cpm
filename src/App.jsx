@@ -141,9 +141,10 @@ const ProjectInquiryView = ({ projects, onEdit }) => {
                     <tr>
                         <th className="px-6 py-3 text-left w-32">工程編號</th>
                         <th className="px-6 py-3 text-left w-32">契約編號</th>
-                        <th className="px-6 py-3 text-left w-24">執行現況</th>
-                        <th className="px-6 py-3 text-left min-w-[200px]">工程名稱</th>
-                        <th className="px-6 py-3 text-left w-24">工程類別</th>
+                        <th className="px-6 py-3 text-left w-32">執行現況</th>
+                        <th className="px-6 py-3 text-left min-w-[400px]">工程名稱</th>
+                        {/* 修正：寬度從 w-24 增加到 w-32 (約30%) */}
+                        <th className="px-6 py-3 text-left w-32">工程類別</th>
                         <th className="px-6 py-3 text-center min-w-[100px]">檢視/編輯</th>
                     </tr>
                 </thead>
@@ -197,7 +198,9 @@ const ProjectForm = ({ initialData, onSubmit, onCancel, isEdit = false }) => {
         category: '傳輸', method: '自辦', type: '新設', designer: '', contractor: '',
         supervisor: '', assistantSupervisor: '', inCharge: '', location: '', note: '',
         startDate: '', endDate: '', constructionOvertime: 0, supervisionOvertime: 0,
-        lodgingLocal: 0, lodgingForeign: 0, businessTrip: 0, budgetNote: ''
+        lodgingConstructionLocal: 0, lodgingConstructionForeign: 0, 
+        lodgingSupervisionLocal: 0, lodgingSupervisionForeign: 0, 
+        businessTrip: 0, budgetNote: ''
     };
 
     const [form, setForm] = useState(initialData || defaultData);
@@ -291,11 +294,15 @@ const ProjectForm = ({ initialData, onSubmit, onCancel, isEdit = false }) => {
                     <div className="md:col-span-2"><label className={labelClass}>預定開工日期</label><input type="date" name="startDate" className={inputClass} value={form.startDate} onChange={handleChange} /></div>
                     <div className="md:col-span-2"><label className={labelClass}>預定完工日期</label><input type="date" name="endDate" className={inputClass} value={form.endDate} onChange={handleChange} /></div>
                     
-                    <div><label className={labelClass}>預算-施工加班(時)</label><input type="number" name="constructionOvertime" className={inputClass} value={form.constructionOvertime} onChange={handleChange} /></div>
-                    <div><label className={labelClass}>預算-監工加班(時)</label><input type="number" name="supervisionOvertime" className={inputClass} value={form.supervisionOvertime} onChange={handleChange} /></div>
-                    <div><label className={labelClass}>預算-食宿(本地)</label><input type="number" name="lodgingLocal" className={inputClass} value={form.lodgingLocal} onChange={handleChange} /></div>
-                    <div><label className={labelClass}>預算-食宿(外地)</label><input type="number" name="lodgingForeign" className={inputClass} value={form.lodgingForeign} onChange={handleChange} /></div>
-                    <div><label className={labelClass}>預算-差調</label><input type="number" name="businessTrip" className={inputClass} value={form.businessTrip} onChange={handleChange} /></div>
+                    {/* 食宿欄位 */}
+                    <div><label className={labelClass}>食宿(施工.本地)</label><input type="number" name="lodgingConstructionLocal" className={inputClass} value={form.lodgingConstructionLocal} onChange={handleChange} /></div>
+                    <div><label className={labelClass}>食宿(施工.外地)</label><input type="number" name="lodgingConstructionForeign" className={inputClass} value={form.lodgingConstructionForeign} onChange={handleChange} /></div>
+                    <div><label className={labelClass}>食宿(監工.本地)</label><input type="number" name="lodgingSupervisionLocal" className={inputClass} value={form.lodgingSupervisionLocal} onChange={handleChange} /></div>
+                    <div><label className={labelClass}>食宿(監工.外地)</label><input type="number" name="lodgingSupervisionForeign" className={inputClass} value={form.lodgingSupervisionForeign} onChange={handleChange} /></div>
+                    
+                    <div><label className={labelClass}>施工加班(時)</label><input type="number" name="constructionOvertime" className={inputClass} value={form.constructionOvertime} onChange={handleChange} /></div>
+                    <div><label className={labelClass}>監工加班(時)</label><input type="number" name="supervisionOvertime" className={inputClass} value={form.supervisionOvertime} onChange={handleChange} /></div>
+                    <div><label className={labelClass}>差調</label><input type="number" name="businessTrip" className={inputClass} value={form.businessTrip} onChange={handleChange} /></div>
                 </div>
             </div>
 
@@ -372,14 +379,18 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
     const calculateRemaining = (project) => {
         const entries = timeEntries.filter(e => e.projectId === project.projectId);
         const spent = {
-            lodgingLocal: entries.reduce((acc, curr) => acc + (parseFloat(curr.lodgingLocalSpent) || 0), 0),
-            lodgingForeign: entries.reduce((acc, curr) => acc + (parseFloat(curr.lodgingForeignSpent) || 0), 0),
+            lodgingConstructionLocal: entries.reduce((acc, curr) => acc + (parseFloat(curr.lodgingConstructionLocalSpent) || 0), 0),
+            lodgingConstructionForeign: entries.reduce((acc, curr) => acc + (parseFloat(curr.lodgingConstructionForeignSpent) || 0), 0),
+            lodgingSupervisionLocal: entries.reduce((acc, curr) => acc + (parseFloat(curr.lodgingSupervisionLocalSpent) || 0), 0),
+            lodgingSupervisionForeign: entries.reduce((acc, curr) => acc + (parseFloat(curr.lodgingSupervisionForeignSpent) || 0), 0),
             constructionOvertime: entries.reduce((acc, curr) => acc + (parseFloat(curr.constructionOvertimeSpent) || 0), 0),
             supervisionOvertime: entries.reduce((acc, curr) => acc + (parseFloat(curr.supervisionOvertimeSpent) || 0), 0),
         };
         return {
-            lodgingLocal: (parseFloat(project.lodgingLocal) || 0) - spent.lodgingLocal,
-            lodgingForeign: (parseFloat(project.lodgingForeign) || 0) - spent.lodgingForeign,
+            lodgingConstructionLocal: (parseFloat(project.lodgingConstructionLocal) || 0) - spent.lodgingConstructionLocal,
+            lodgingConstructionForeign: (parseFloat(project.lodgingConstructionForeign) || 0) - spent.lodgingConstructionForeign,
+            lodgingSupervisionLocal: (parseFloat(project.lodgingSupervisionLocal) || 0) - spent.lodgingSupervisionLocal,
+            lodgingSupervisionForeign: (parseFloat(project.lodgingSupervisionForeign) || 0) - spent.lodgingSupervisionForeign,
             constructionOvertime: (parseFloat(project.constructionOvertime) || 0) - spent.constructionOvertime,
             supervisionOvertime: (parseFloat(project.supervisionOvertime) || 0) - spent.supervisionOvertime,
         };
@@ -410,18 +421,23 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
             <div className="flex-1 overflow-auto p-0 bg-slate-50/50">
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200">
+                        {/* 修改字體大小為 text-xs */}
                         <thead className="bg-slate-100 sticky top-0 z-10 text-xs font-bold uppercase tracking-wider text-slate-600">
                             <tr>
                                 <th className="px-4 py-3 text-left">工程編號</th>
-                                <th className="px-4 py-3 text-left">契約編號</th>
                                 <th className="px-4 py-3 text-left min-w-[150px]">工程名稱</th>
-                                <th className="px-4 py-3 text-left">施工方式</th>
-                                <th className="px-4 py-3 text-left">現況</th>
-                                <th className="px-4 py-3 text-right bg-blue-50 text-blue-800">剩餘食宿(本)</th>
-                                <th className="px-4 py-3 text-right bg-blue-50 text-blue-800">剩餘食宿(外)</th>
-                                <th className="px-4 py-3 text-right bg-orange-50 text-orange-800">剩餘施工加班</th>
-                                <th className="px-4 py-3 text-right bg-orange-50 text-orange-800">剩餘監工加班</th>
-                                {/* 寬度調整：min-w-[200px] 確保欄位不會太窄 */}
+                                {/* 加寬施工方式 */}
+                                <th className="px-4 py-3 text-left min-w-[100px]">施工方式</th>
+                                {/* 加寬施工現況，並改名 */}
+                                <th className="px-4 py-3 text-left min-w-[80px]">施工現況</th>
+                                {/* 縮減食宿欄位，加入換行 */}
+                                <th className="px-1 py-3 text-right bg-blue-50 text-blue-800 w-18">剩餘食宿<br/>(施工.本地)</th>
+                                <th className="px-1 py-3 text-right bg-blue-50 text-blue-800 w-18">剩餘食宿<br/>(施工.外地)</th>
+                                <th className="px-1 py-3 text-right bg-green-50 text-green-800 w-18">剩餘食宿<br/>(監工.本地)</th>
+                                <th className="px-1 py-3 text-right bg-green-50 text-green-800 w-18">剩餘食宿<br/>(監工.外地)</th>
+                                {/* 縮減加班欄位，加入換行 */}
+                                <th className="px-1 py-3 text-right bg-orange-50 text-orange-800 w-18">剩餘加班<br/>(施工)</th>
+                                <th className="px-1 py-3 text-right bg-orange-50 text-orange-800 w-18">剩餘加班<br/>(監工)</th>
                                 <th className="px-4 py-3 text-left min-w-[200px]">備註</th>
                                 <th className="px-4 py-3 text-center">申報</th>
                                 <th className="px-4 py-3 text-center">動支明細</th>
@@ -433,15 +449,16 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
                                 return (
                                     <tr key={p._id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-4 py-3 font-mono text-emerald-600">{p.projectId}</td>
-                                        <td className="px-4 py-3 font-mono text-slate-600">{p.contractId}</td>
                                         <td className="px-4 py-3 font-medium text-slate-900">{p.projectName}</td>
                                         <td className="px-4 py-3 text-slate-600">{p.method}</td>
                                         <td className="px-4 py-3 text-slate-600">{p.status}</td>
-                                        <td className={`px-4 py-3 text-right font-mono ${remaining.lodgingLocal < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingLocal}</td>
-                                        <td className={`px-4 py-3 text-right font-mono ${remaining.lodgingForeign < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingForeign}</td>
-                                        <td className={`px-4 py-3 text-right font-mono ${remaining.constructionOvertime < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.constructionOvertime}</td>
-                                        <td className={`px-4 py-3 text-right font-mono ${remaining.supervisionOvertime < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.supervisionOvertime}</td>
-                                        {/* 修改：移除 truncate 和 max-w，加入 whitespace-pre-wrap 保留換行 */}
+                                        {/* 縮減顯示，恢復 text-sm */}
+                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingConstructionLocal < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingConstructionLocal}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingConstructionForeign < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingConstructionForeign}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingSupervisionLocal < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingSupervisionLocal}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingSupervisionForeign < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingSupervisionForeign}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.constructionOvertime < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.constructionOvertime}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.supervisionOvertime < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.supervisionOvertime}</td>
                                         <td className="px-4 py-3 text-slate-500 whitespace-pre-wrap min-w-[200px]">{p.budgetNote}</td>
                                         <td className="px-4 py-3 text-center">
                                             <button onClick={() => handleOpenAddModal(p)} className="p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors" title="申報動支">
@@ -486,15 +503,17 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
     );
 };
 
-// --- 新增動支 Modal ---
+// --- 新增動支 Modal (更新欄位) ---
 const AddTimeEntryModal = ({ project, remaining, employees = [], onSubmit, onClose }) => {
     const [entry, setEntry] = useState({
         projectId: project.projectId,
         employeeId: '',
         employeeName: '',
         date: new Date().toISOString().split('T')[0],
-        lodgingLocalSpent: 0,
-        lodgingForeignSpent: 0,
+        lodgingConstructionLocalSpent: 0,
+        lodgingConstructionForeignSpent: 0,
+        lodgingSupervisionLocalSpent: 0,
+        lodgingSupervisionForeignSpent: 0,
         constructionOvertimeSpent: 0,
         supervisionOvertimeSpent: 0
     });
@@ -532,7 +551,7 @@ const AddTimeEntryModal = ({ project, remaining, employees = [], onSubmit, onClo
 
     return (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-emerald-50">
                     <h3 className="text-lg font-bold text-emerald-800 flex items-center">
                         <Coins className="mr-2" size={20}/> 新增動支: {project.projectName}
@@ -584,12 +603,20 @@ const AddTimeEntryModal = ({ project, remaining, employees = [], onSubmit, onClo
                         <div className="text-sm font-bold text-slate-700 mb-3">動支項目</div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className={labelClass}>食宿(本地) <span className={remainingClass(remaining.lodgingLocal)}>剩餘: {remaining.lodgingLocal}</span></label>
-                                <input type="number" name="lodgingLocalSpent" className={inputClass} value={entry.lodgingLocalSpent} onChange={handleChange}/>
+                                <label className={labelClass}>食宿(施工.本地) <span className={remainingClass(remaining.lodgingConstructionLocal)}>剩餘: {remaining.lodgingConstructionLocal}</span></label>
+                                <input type="number" name="lodgingConstructionLocalSpent" className={inputClass} value={entry.lodgingConstructionLocalSpent} onChange={handleChange}/>
                             </div>
                             <div>
-                                <label className={labelClass}>食宿(外地) <span className={remainingClass(remaining.lodgingForeign)}>剩餘: {remaining.lodgingForeign}</span></label>
-                                <input type="number" name="lodgingForeignSpent" className={inputClass} value={entry.lodgingForeignSpent} onChange={handleChange}/>
+                                <label className={labelClass}>食宿(施工.外地) <span className={remainingClass(remaining.lodgingConstructionForeign)}>剩餘: {remaining.lodgingConstructionForeign}</span></label>
+                                <input type="number" name="lodgingConstructionForeignSpent" className={inputClass} value={entry.lodgingConstructionForeignSpent} onChange={handleChange}/>
+                            </div>
+                            <div>
+                                <label className={labelClass}>食宿(監工.本地) <span className={remainingClass(remaining.lodgingSupervisionLocal)}>剩餘: {remaining.lodgingSupervisionLocal}</span></label>
+                                <input type="number" name="lodgingSupervisionLocalSpent" className={inputClass} value={entry.lodgingSupervisionLocalSpent} onChange={handleChange}/>
+                            </div>
+                            <div>
+                                <label className={labelClass}>食宿(監工.外地) <span className={remainingClass(remaining.lodgingSupervisionForeign)}>剩餘: {remaining.lodgingSupervisionForeign}</span></label>
+                                <input type="number" name="lodgingSupervisionForeignSpent" className={inputClass} value={entry.lodgingSupervisionForeignSpent} onChange={handleChange}/>
                             </div>
                             <div>
                                 <label className={labelClass}>施工加班(時) <span className={remainingClass(remaining.constructionOvertime)}>剩餘: {remaining.constructionOvertime}</span></label>
@@ -612,11 +639,11 @@ const AddTimeEntryModal = ({ project, remaining, employees = [], onSubmit, onClo
     );
 };
 
-// --- 動支明細 Modal ---
+// --- 動支明細 Modal (更新欄位) ---
 const TimeEntryDetailModal = ({ project, entries, onClose, onDeleteEntry }) => {
     return (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[80vh]">
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-blue-50">
                     <h3 className="text-lg font-bold text-blue-800 flex items-center">
                         <ClipboardList className="mr-2" size={20}/> 動支明細: {project.projectName} ({project.projectId})
@@ -627,25 +654,29 @@ const TimeEntryDetailModal = ({ project, entries, onClose, onDeleteEntry }) => {
                     <table className="min-w-full divide-y divide-slate-200">
                         <thead className="bg-slate-50 sticky top-0 z-10 text-xs font-bold uppercase tracking-wider text-slate-600">
                             <tr>
-                                <th className="px-6 py-3 text-left">動支日期</th>
-                                <th className="px-6 py-3 text-left">員工姓名</th>
-                                <th className="px-6 py-3 text-right">食宿(本地)</th>
-                                <th className="px-6 py-3 text-right">食宿(外地)</th>
-                                <th className="px-6 py-3 text-right">施工加班</th>
-                                <th className="px-6 py-3 text-right">監工加班</th>
-                                <th className="px-6 py-3 text-center">操作</th>
+                                <th className="px-4 py-3 text-left">動支日期</th>
+                                <th className="px-4 py-3 text-left">員工姓名</th>
+                                <th className="px-4 py-3 text-right">食宿(施.本)</th>
+                                <th className="px-4 py-3 text-right">食宿(施.外)</th>
+                                <th className="px-4 py-3 text-right">食宿(監.本)</th>
+                                <th className="px-4 py-3 text-right">食宿(監.外)</th>
+                                <th className="px-4 py-3 text-right">施工加班</th>
+                                <th className="px-4 py-3 text-right">監工加班</th>
+                                <th className="px-4 py-3 text-center">操作</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-slate-100 text-sm">
                             {entries.length > 0 ? entries.map(e => (
                                 <tr key={e._id} className="hover:bg-slate-50">
-                                    <td className="px-6 py-3 font-mono text-slate-600">{e.date}</td>
-                                    <td className="px-6 py-3 text-slate-800">{e.employeeName} <span className="text-xs text-slate-400">({e.employeeId})</span></td>
-                                    <td className="px-6 py-3 text-right font-mono">{e.lodgingLocalSpent || 0}</td>
-                                    <td className="px-6 py-3 text-right font-mono">{e.lodgingForeignSpent || 0}</td>
-                                    <td className="px-6 py-3 text-right font-mono">{e.constructionOvertimeSpent || 0}</td>
-                                    <td className="px-6 py-3 text-right font-mono">{e.supervisionOvertimeSpent || 0}</td>
-                                    <td className="px-6 py-3 text-center">
+                                    <td className="px-4 py-3 font-mono text-slate-600">{e.date}</td>
+                                    <td className="px-4 py-3 text-slate-800">{e.employeeName} <span className="text-xs text-slate-400">({e.employeeId})</span></td>
+                                    <td className="px-4 py-3 text-right font-mono">{e.lodgingConstructionLocalSpent || 0}</td>
+                                    <td className="px-4 py-3 text-right font-mono">{e.lodgingConstructionForeignSpent || 0}</td>
+                                    <td className="px-4 py-3 text-right font-mono">{e.lodgingSupervisionLocalSpent || 0}</td>
+                                    <td className="px-4 py-3 text-right font-mono">{e.lodgingSupervisionForeignSpent || 0}</td>
+                                    <td className="px-4 py-3 text-right font-mono">{e.constructionOvertimeSpent || 0}</td>
+                                    <td className="px-4 py-3 text-right font-mono">{e.supervisionOvertimeSpent || 0}</td>
+                                    <td className="px-4 py-3 text-center">
                                         <button 
                                             onClick={() => onDeleteEntry(e._id)}
                                             className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 transition-colors"
@@ -657,7 +688,7 @@ const TimeEntryDetailModal = ({ project, entries, onClose, onDeleteEntry }) => {
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan="7" className="px-6 py-12 text-center text-slate-400">尚無動支紀錄</td>
+                                    <td colSpan="9" className="px-6 py-12 text-center text-slate-400">尚無動支紀錄</td>
                                 </tr>
                             )}
                         </tbody>
@@ -714,9 +745,10 @@ const EmployeeManagementView = ({ employees, onAddEmployee, onDeleteEmployee }) 
                     <table className="min-w-full divide-y divide-slate-200">
                         <thead className="bg-slate-100 sticky top-0 z-10 text-xs font-bold uppercase tracking-wider text-slate-600">
                             <tr>
-                                <th className="px-6 py-3 text-left">員工編號</th>
-                                <th className="px-6 py-3 text-left">員工姓名</th>
-                                {/* 修改：標題改為「刪除」 */}
+                                {/* 加寬員工編號欄位 */}
+                                <th className="px-6 py-3 text-left min-w-[200px]">員工編號</th>
+                                {/* 加寬員工姓名欄位 */}
+                                <th className="px-6 py-3 text-left min-w-[200px]">員工姓名</th>
                                 <th className="px-6 py-3 text-center">刪除</th>
                             </tr>
                         </thead>
@@ -726,7 +758,6 @@ const EmployeeManagementView = ({ employees, onAddEmployee, onDeleteEmployee }) 
                                     <td className="px-6 py-4 font-mono text-emerald-600 font-medium">{emp.id}</td>
                                     <td className="px-6 py-4 font-medium text-slate-900">{emp.name}</td>
                                     <td className="px-6 py-4 text-center">
-                                        {/* 修改：按鈕改為垃圾桶圖示與刪除功能 */}
                                         <button onClick={() => handleDelete(emp.id)} className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 transition-colors" title="刪除">
                                             <Trash2 size={18} />
                                         </button>
@@ -824,7 +855,7 @@ const Sidebar = ({ currentView, setCurrentView, fileName, isUnsaved, onOpenFile,
     <div className="flex flex-col w-64 bg-slate-900 text-white shadow-2xl h-full p-4 flex-shrink-0 z-20">
       <div className="flex items-center space-x-3 p-3 mb-8 border-b border-slate-700">
         <div className="bg-emerald-500/20 p-2 rounded-lg"><Users className="w-6 h-6 text-emerald-400" /></div>
-        <div><h1 className="text-lg font-bold tracking-wider">工程管理</h1><span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400 border border-slate-600">CPM V1.0</span></div>
+        <div><h1 className="text-lg font-bold tracking-wider">工程管理</h1><span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400 border border-slate-600">CPM V1.1</span></div>
       </div>
 
       <div className="mb-6 p-4 bg-slate-800 rounded-xl border border-slate-700">
