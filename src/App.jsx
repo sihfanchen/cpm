@@ -91,7 +91,7 @@ const WelcomeView = ({ onOpen, onNew, isSupported }) => (
     </div>
 );
 
-// 2. 專案查詢列表 (橫式表格 - 已簡化欄位)
+// 2. 專案查詢列表 (橫式表格)
 const ProjectInquiryView = ({ projects, onEdit }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const filtered = projects.filter(p => 
@@ -370,7 +370,6 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
     const [selectedProject, setSelectedProject] = useState(null);
     const [detailProject, setDetailProject] = useState(null);
 
-    // 修改：過濾邏輯增加 status 判斷
     const filteredProjects = projects.filter(p => 
         ((p.projectId && p.projectId.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (p.projectName && p.projectName.toLowerCase().includes(searchTerm.toLowerCase()))) &&
@@ -427,15 +426,17 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
                             <tr>
                                 <th className="px-4 py-3 text-left">工程編號</th>
                                 <th className="px-4 py-3 text-left min-w-[150px]">工程名稱</th>
+                                {/* 加寬施工方式 */}
                                 <th className="px-4 py-3 text-left min-w-[130px]">施工方式</th>
+                                {/* 加寬施工現況，並改名 */}
                                 <th className="px-4 py-3 text-left min-w-[160px]">施工現況</th>
-                                {/* 縮減食宿與加班欄位寬度，使用 w-20 並保留換行 */}
-                                <th className="px-1 py-3 text-right bg-blue-50 text-blue-800 w-20">剩餘食宿<br/>(施工.本地)</th>
-                                <th className="px-1 py-3 text-right bg-blue-50 text-blue-800 w-20">剩餘食宿<br/>(施工.外地)</th>
-                                <th className="px-1 py-3 text-right bg-green-50 text-green-800 w-20">剩餘食宿<br/>(監工.本地)</th>
-                                <th className="px-1 py-3 text-right bg-green-50 text-green-800 w-20">剩餘食宿<br/>(監工.外地)</th>
-                                <th className="px-1 py-3 text-right bg-orange-50 text-orange-800 w-20">剩餘加班<br/>(施工)</th>
-                                <th className="px-1 py-3 text-right bg-orange-50 text-orange-800 w-20">剩餘加班<br/>(監工)</th>
+                                {/* 更新配色方案：施工-藍 / 監工-綠 / 加班-琥珀 & 玫瑰 */}
+                                <th className="px-1 py-3 text-right bg-blue-50 text-blue-900 w-20">剩餘食宿<br/>(施工.本地)</th>
+                                <th className="px-1 py-3 text-right bg-indigo-50 text-indigo-900 w-20">剩餘食宿<br/>(施工.外地)</th>
+                                <th className="px-1 py-3 text-right bg-green-50 text-green-900 w-20">剩餘食宿<br/>(監工.本地)</th>
+                                <th className="px-1 py-3 text-right bg-teal-50 text-teal-900 w-20">剩餘食宿<br/>(監工.外地)</th>
+                                <th className="px-1 py-3 text-right bg-amber-50 text-amber-900 w-20">剩餘加班<br/>(施工)</th>
+                                <th className="px-1 py-3 text-right bg-rose-50 text-rose-900 w-20">剩餘加班<br/>(監工)</th>
                                 <th className="px-4 py-3 text-left min-w-[200px]">備註</th>
                                 <th className="px-4 py-3 text-center">申報</th>
                                 <th className="px-4 py-3 text-center">動支明細</th>
@@ -450,13 +451,13 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
                                         <td className="px-4 py-3 font-medium text-slate-900">{p.projectName}</td>
                                         <td className="px-4 py-3 text-slate-600">{p.method}</td>
                                         <td className="px-4 py-3 text-slate-600">{p.status}</td>
-                                        {/* 內容文字大小恢復為 text-sm */}
-                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingConstructionLocal < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingConstructionLocal}</td>
-                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingConstructionForeign < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingConstructionForeign}</td>
-                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingSupervisionLocal < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingSupervisionLocal}</td>
-                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.lodgingSupervisionForeign < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.lodgingSupervisionForeign}</td>
-                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.constructionOvertime < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.constructionOvertime}</td>
-                                        <td className={`px-1 py-3 text-right font-mono text-sm ${remaining.supervisionOvertime < 0 ? 'text-red-600 font-bold' : 'text-slate-700'}`}>{remaining.supervisionOvertime}</td>
+                                        {/* 直列顯色：背景色延伸至 Body */}
+                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-blue-50 ${remaining.lodgingConstructionLocal < 0 ? 'text-red-600 font-bold' : 'text-blue-900'}`}>{remaining.lodgingConstructionLocal}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-indigo-50 ${remaining.lodgingConstructionForeign < 0 ? 'text-red-600 font-bold' : 'text-indigo-900'}`}>{remaining.lodgingConstructionForeign}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-green-50 ${remaining.lodgingSupervisionLocal < 0 ? 'text-red-600 font-bold' : 'text-green-900'}`}>{remaining.lodgingSupervisionLocal}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-teal-50 ${remaining.lodgingSupervisionForeign < 0 ? 'text-red-600 font-bold' : 'text-teal-900'}`}>{remaining.lodgingSupervisionForeign}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-amber-50 ${remaining.constructionOvertime < 0 ? 'text-red-600 font-bold' : 'text-amber-900'}`}>{remaining.constructionOvertime}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-rose-50 ${remaining.supervisionOvertime < 0 ? 'text-red-600 font-bold' : 'text-rose-900'}`}>{remaining.supervisionOvertime}</td>
                                         <td className="px-4 py-3 text-slate-500 whitespace-pre-wrap min-w-[200px]">{p.budgetNote}</td>
                                         <td className="px-4 py-3 text-center">
                                             <button onClick={() => handleOpenAddModal(p)} className="p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors" title="申報動支">
@@ -854,7 +855,7 @@ const Sidebar = ({ currentView, setCurrentView, fileName, isUnsaved, onOpenFile,
     <div className="flex flex-col w-64 bg-slate-900 text-white shadow-2xl h-full p-4 flex-shrink-0 z-20">
       <div className="flex items-center space-x-3 p-3 mb-8 border-b border-slate-700">
         <div className="bg-emerald-500/20 p-2 rounded-lg"><Users className="w-6 h-6 text-emerald-400" /></div>
-        <div><h1 className="text-lg font-bold tracking-wider">工程管理</h1><span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400 border border-slate-600">CPM V1.2</span></div>
+        <div><h1 className="text-lg font-bold tracking-wider">工程管理</h1><span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400 border border-slate-600">CPM V1.3</span></div>
       </div>
 
       <div className="mb-6 p-4 bg-slate-800 rounded-xl border border-slate-700">
