@@ -1,31 +1,140 @@
 import React, { useState, useEffect } from 'react';
-import { Search, PlusCircle, LayoutGrid, Clock, Users, Save, FolderOpen, FileJson, AlertTriangle, HardDrive, Edit2, Zap, Calendar, MapPin, Briefcase, FileText, UserCheck, X, ChevronRight, FilePlus, Coins, ClipboardList, Trash2, UserCog, UserPlus } from 'lucide-react';
+import { Search, PlusCircle, LayoutGrid, Clock, Users, Save, FolderOpen, FileJson, AlertTriangle, HardDrive, Edit2, Zap, Calendar, MapPin, Briefcase, FileText, UserCheck, X, ChevronRight, FilePlus, Coins, ClipboardList, Trash2, UserCog, UserPlus, Sheet } from 'lucide-react';
+import * as XLSX from 'xlsx'; // 本地開發時請取消此註解，並執行 npm install xlsx
 
-// --- 檔案系統 API 封裝 ---
+// --- Excel 欄位對照表 (核心配置) ---
+// 定義程式變數(Key)與 Excel 標題(Header)的對應關係
+const FIELD_MAP = {
+  project: {
+    projectId: "工程編號",
+    contractId: "契約編號",
+    status: "執行現況",
+    projectName: "工程名稱",
+    year: "年度",
+    category: "工程類別",
+    method: "施工方式",
+    type: "工程性質",
+    designer: "設計員",
+    contractor: "承包商名稱",
+    supervisor: "監工員",
+    assistantSupervisor: "助理監工員",
+    inCharge: "負責員",
+    location: "施工地點",
+    startDate: "預定開工日期",
+    endDate: "預定完工日期",
+    lodgingConstructionLocal: "預算-食宿(施工.本地)",
+    lodgingConstructionForeign: "預算-食宿(施工.外地)",
+    lodgingSupervisionLocal: "預算-食宿(監工.本地)",
+    lodgingSupervisionForeign: "預算-食宿(監工.外地)",
+    constructionOvertime: "預算-加班(施工)",
+    supervisionOvertime: "預算-加班(監工)",
+    businessTrip: "預算-差調",
+    note: "備註",
+    budgetNote: "預算工日備註"
+  },
+  entry: {
+    projectId: "工程編號",
+    employeeId: "員工編號",
+    employeeName: "員工姓名",
+    date: "動支日期",
+    lodgingConstructionLocalSpent: "動支-食宿(施工.本地)",
+    lodgingConstructionForeignSpent: "動支-食宿(施工.外地)",
+    lodgingSupervisionLocalSpent: "動支-食宿(監工.本地)",
+    lodgingSupervisionForeignSpent: "動支-食宿(監工.外地)",
+    constructionOvertimeSpent: "動支-加班(施工)",
+    supervisionOvertimeSpent: "動支-加班(監工)"
+  },
+  employee: {
+    id: "員工編號",
+    name: "員工姓名"
+  }
+};
+
+// --- Excel 轉換工具函數 ---
+const ExcelUtils = {
+  // 將資料陣列轉換為 Excel Sheet，並處理中文標題
+  jsonToSheet: (data, map) => {
+    // 取得 XLSX 物件 (本地開發請改用 import 的 XLSX)
+    const XLSX = window.XLSX;
+    if (!XLSX) {
+        alert("Excel 模組尚未載入完成，請稍後再試");
+        return null;
+    }
+
+    const mappedData = data.map(item => {
+      const newItem = {};
+      Object.keys(map).forEach(key => {
+        // 如果值是 undefined 或 null，轉為空字串，避免 Excel 出錯
+        newItem[map[key]] = item[key] !== undefined && item[key] !== null ? item[key] : '';
+      });
+      return newItem;
+    });
+    return XLSX.utils.json_to_sheet(mappedData);
+  },
+
+  // 將 Excel Sheet 轉換為 JSON，並還原為程式變數
+  sheetToJson: (sheet, map) => {
+    const XLSX = window.XLSX;
+    const rawData = XLSX.utils.sheet_to_json(sheet);
+    // 建立反向對照表 (中文 -> 英文)
+    const reverseMap = Object.fromEntries(Object.entries(map).map(([k, v]) => [v, k]));
+    
+    return rawData.map((item, index) => {
+      const newItem = { _id: `IMPORTED_${index}_${Date.now()}` }; // 自動產生內部 ID
+      Object.keys(item).forEach(zhKey => {
+        const enKey = reverseMap[zhKey];
+        if (enKey) {
+          newItem[enKey] = item[zhKey];
+        }
+      });
+      return newItem;
+    });
+  }
+};
+
+// --- 檔案系統 API 封裝 (Excel 版) ---
 const FileSystem = {
   isSupported: () => 'showOpenFilePicker' in window,
+  
   openFile: async () => {
     try {
       const [fileHandle] = await window.showOpenFilePicker({
-        types: [{ description: 'Project Data Files', accept: { 'application/json': ['.json'] } }],
+        types: [{ description: 'Excel Files', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
         multiple: false,
       });
       const file = await fileHandle.getFile();
-      const contents = await file.text();
-      return { handle: fileHandle, data: JSON.parse(contents), name: file.name };
+      const arrayBuffer = await file.arrayBuffer();
+      
+      const XLSX = window.XLSX;
+      if (!XLSX) throw new Error("XLSX lib not loaded");
+
+      // 使用 SheetJS 讀取
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      
+      // 讀取各個工作表
+      const projects = workbook.Sheets['工程案明細'] ? ExcelUtils.sheetToJson(workbook.Sheets['工程案明細'], FIELD_MAP.project) : [];
+      const timeEntries = workbook.Sheets['動支紀錄'] ? ExcelUtils.sheetToJson(workbook.Sheets['動支紀錄'], FIELD_MAP.entry) : [];
+      const employees = workbook.Sheets['員工清單'] ? ExcelUtils.sheetToJson(workbook.Sheets['員工清單'], FIELD_MAP.employee) : [];
+
+      return { 
+        handle: fileHandle, 
+        data: { projects, timeEntries, employees }, 
+        name: file.name 
+      };
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error('開啟失敗:', error);
-        alert('無法開啟檔案。');
+        alert('無法開啟檔案或格式錯誤 (請確認是 .xlsx 檔)。');
       }
       return null;
     }
   },
+
   saveFileAs: async (data) => {
     try {
       const fileHandle = await window.showSaveFilePicker({
-        types: [{ description: 'Project Data Files', accept: { 'application/json': ['.json'] } }],
-        suggestedName: `project_data_${new Date().toISOString().split('T')[0]}.json`,
+        types: [{ description: 'Excel Files', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
+        suggestedName: `工程管理資料庫_${new Date().toISOString().split('T')[0]}.xlsx`,
       });
       await FileSystem.writeFile(fileHandle, data);
       return fileHandle;
@@ -34,9 +143,32 @@ const FileSystem = {
       return null;
     }
   },
+
   writeFile: async (fileHandle, data) => {
+    const XLSX = window.XLSX;
+    if (!XLSX) return false;
+
+    // 建立 Workbook
+    const workbook = XLSX.utils.book_new();
+
+    // 建立各個 Sheets
+    const projectSheet = ExcelUtils.jsonToSheet(data.projects, FIELD_MAP.project);
+    const entrySheet = ExcelUtils.jsonToSheet(data.timeEntries, FIELD_MAP.entry);
+    const employeeSheet = ExcelUtils.jsonToSheet(data.employees, FIELD_MAP.employee);
+
+    if (!projectSheet || !entrySheet || !employeeSheet) return false;
+
+    // 將 Sheets 加入 Workbook
+    XLSX.utils.book_append_sheet(workbook, projectSheet, "工程案明細");
+    XLSX.utils.book_append_sheet(workbook, entrySheet, "動支紀錄");
+    XLSX.utils.book_append_sheet(workbook, employeeSheet, "員工清單");
+
+    // 產生二進位資料
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    
+    // 寫入檔案
     const writable = await fileHandle.createWritable();
-    await writable.write(JSON.stringify(data, null, 2));
+    await writable.write(excelBuffer);
     await writable.close();
     return true;
   }
@@ -57,12 +189,13 @@ const WelcomeView = ({ onOpen, onNew, isSupported }) => (
     <div className="flex flex-col items-center justify-center h-full w-full p-4 animate-fade-in">
         <div className="text-center mb-12">
             <div className="inline-flex items-center justify-center p-6 rounded-3xl bg-gradient-to-br from-emerald-100 to-teal-50 mb-6 shadow-inner border border-emerald-100/50 text-emerald-600">
-                <HardDrive size={64} />
+                <Sheet size={64} />
             </div>
             <h2 className="text-4xl md:text-5xl font-extrabold text-slate-800 mb-4 tracking-tight">本地工程管理系統</h2>
+            <div className="inline-block px-4 py-1 rounded-full bg-emerald-100 text-emerald-800 text-sm font-bold mb-4">Excel 版本</div>
             <p className="text-lg md:text-xl text-slate-500 font-light max-w-2xl mx-auto">
-                您的資料完全掌握在自己手中，無需上傳雲端。<br/>
-                <span className="text-sm text-slate-400 mt-2 block">Powered by File System Access API</span>
+                直接讀寫 Excel (.xlsx) 檔案，資料完全掌握在自己手中。<br/>
+                <span className="text-sm text-slate-400 mt-2 block">Powered by SheetJS & File System Access API</span>
             </p>
         </div>
         
@@ -72,8 +205,8 @@ const WelcomeView = ({ onOpen, onNew, isSupported }) => (
                     <div className="p-3 bg-emerald-100 rounded-2xl mb-4 w-fit group-hover:scale-110 transition-transform duration-300">
                         <PlusCircle size={32} className="text-emerald-600" />
                     </div>
-                    <h3 className="text-2xl font-bold text-slate-800 mb-2">建立新專案檔</h3>
-                    <p className="text-slate-500">從頭開始一個新的資料庫檔案。</p>
+                    <h3 className="text-2xl font-bold text-slate-800 mb-2">建立新 Excel 資料庫</h3>
+                    <p className="text-slate-500">從頭開始一個新的專案檔。</p>
                 </div>
             </button>
 
@@ -82,8 +215,8 @@ const WelcomeView = ({ onOpen, onNew, isSupported }) => (
                     <div className="p-3 bg-blue-100 rounded-2xl mb-4 w-fit group-hover:scale-110 transition-transform duration-300">
                         <FolderOpen size={32} className="text-blue-600" />
                     </div>
-                    <h3 className="text-2xl font-bold text-slate-800 mb-2">開啟現有檔案</h3>
-                    <p className="text-slate-500">直接編輯電腦中的 JSON 檔案。</p>
+                    <h3 className="text-2xl font-bold text-slate-800 mb-2">開啟現有 Excel</h3>
+                    <p className="text-slate-500">直接編輯電腦中的 .xlsx 檔案。</p>
                     {!isSupported && <p className="text-xs text-amber-600 mt-2 bg-amber-50 p-2 rounded flex items-center"><AlertTriangle size={12} className="mr-1"/> 需使用 Chrome/Edge</p>}
                 </div>
             </button>
@@ -91,7 +224,7 @@ const WelcomeView = ({ onOpen, onNew, isSupported }) => (
     </div>
 );
 
-// 2. 專案查詢列表 (橫式表格)
+// 2. 專案查詢列表 (橫式表格 - 已簡化欄位)
 const ProjectInquiryView = ({ projects, onEdit }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const filtered = projects.filter(p => 
@@ -421,7 +554,7 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
             <div className="flex-1 overflow-auto p-0 bg-slate-50/50">
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200">
-                        {/* 修正字體大小與欄位寬度 */}
+                        {/* 修正：字體恢復 text-xs，移除契約編號 */}
                         <thead className="bg-slate-100 sticky top-0 z-10 text-xs font-bold uppercase tracking-wider text-slate-600">
                             <tr>
                                 <th className="px-4 py-3 text-left">工程編號</th>
@@ -430,13 +563,14 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
                                 <th className="px-4 py-3 text-left min-w-[130px]">施工方式</th>
                                 {/* 加寬施工現況，並改名 */}
                                 <th className="px-4 py-3 text-left min-w-[160px]">施工現況</th>
-                                {/* 更新配色方案：施工-藍 / 監工-綠 / 加班-琥珀 & 玫瑰 */}
+                                {/* 縮減食宿欄位，加入換行，設定固定寬度 w-20 */}
                                 <th className="px-1 py-3 text-right bg-blue-50 text-blue-900 w-20">剩餘食宿<br/>(施工.本地)</th>
-                                <th className="px-1 py-3 text-right bg-indigo-50 text-indigo-900 w-20">剩餘食宿<br/>(施工.外地)</th>
+                                <th className="px-1 py-3 text-right bg-blue-50 text-blue-900 w-20">剩餘食宿<br/>(施工.外地)</th>
                                 <th className="px-1 py-3 text-right bg-green-50 text-green-900 w-20">剩餘食宿<br/>(監工.本地)</th>
-                                <th className="px-1 py-3 text-right bg-teal-50 text-teal-900 w-20">剩餘食宿<br/>(監工.外地)</th>
-                                <th className="px-1 py-3 text-right bg-amber-50 text-amber-900 w-20">剩餘加班<br/>(施工)</th>
-                                <th className="px-1 py-3 text-right bg-rose-50 text-rose-900 w-20">剩餘加班<br/>(監工)</th>
+                                <th className="px-1 py-3 text-right bg-green-50 text-green-900 w-20">剩餘食宿<br/>(監工.外地)</th>
+                                {/* 縮減加班欄位，加入換行，設定固定寬度 w-20 */}
+                                <th className="px-1 py-3 text-right bg-orange-50 text-orange-900 w-20">剩餘加班<br/>(施工)</th>
+                                <th className="px-1 py-3 text-right bg-orange-50 text-orange-900 w-20">剩餘加班<br/>(監工)</th>
                                 <th className="px-4 py-3 text-left min-w-[200px]">備註</th>
                                 <th className="px-4 py-3 text-center">申報</th>
                                 <th className="px-4 py-3 text-center">動支明細</th>
@@ -451,13 +585,13 @@ const TimeEntryView = ({ projects, timeEntries, employees, onAddEntry, onDeleteE
                                         <td className="px-4 py-3 font-medium text-slate-900">{p.projectName}</td>
                                         <td className="px-4 py-3 text-slate-600">{p.method}</td>
                                         <td className="px-4 py-3 text-slate-600">{p.status}</td>
-                                        {/* 直列顯色：背景色延伸至 Body */}
+                                        {/* 直列顯色：恢復 text-sm，保留背景色 */}
                                         <td className={`px-1 py-3 text-right font-mono text-sm bg-blue-50 ${remaining.lodgingConstructionLocal < 0 ? 'text-red-600 font-bold' : 'text-blue-900'}`}>{remaining.lodgingConstructionLocal}</td>
-                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-indigo-50 ${remaining.lodgingConstructionForeign < 0 ? 'text-red-600 font-bold' : 'text-indigo-900'}`}>{remaining.lodgingConstructionForeign}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-blue-50 ${remaining.lodgingConstructionForeign < 0 ? 'text-red-600 font-bold' : 'text-blue-900'}`}>{remaining.lodgingConstructionForeign}</td>
                                         <td className={`px-1 py-3 text-right font-mono text-sm bg-green-50 ${remaining.lodgingSupervisionLocal < 0 ? 'text-red-600 font-bold' : 'text-green-900'}`}>{remaining.lodgingSupervisionLocal}</td>
-                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-teal-50 ${remaining.lodgingSupervisionForeign < 0 ? 'text-red-600 font-bold' : 'text-teal-900'}`}>{remaining.lodgingSupervisionForeign}</td>
-                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-amber-50 ${remaining.constructionOvertime < 0 ? 'text-red-600 font-bold' : 'text-amber-900'}`}>{remaining.constructionOvertime}</td>
-                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-rose-50 ${remaining.supervisionOvertime < 0 ? 'text-red-600 font-bold' : 'text-rose-900'}`}>{remaining.supervisionOvertime}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-green-50 ${remaining.lodgingSupervisionForeign < 0 ? 'text-red-600 font-bold' : 'text-green-900'}`}>{remaining.lodgingSupervisionForeign}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-orange-50 ${remaining.constructionOvertime < 0 ? 'text-red-600 font-bold' : 'text-orange-900'}`}>{remaining.constructionOvertime}</td>
+                                        <td className={`px-1 py-3 text-right font-mono text-sm bg-orange-50 ${remaining.supervisionOvertime < 0 ? 'text-red-600 font-bold' : 'text-orange-900'}`}>{remaining.supervisionOvertime}</td>
                                         <td className="px-4 py-3 text-slate-500 whitespace-pre-wrap min-w-[200px]">{p.budgetNote}</td>
                                         <td className="px-4 py-3 text-center">
                                             <button onClick={() => handleOpenAddModal(p)} className="p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors" title="申報動支">
@@ -855,7 +989,7 @@ const Sidebar = ({ currentView, setCurrentView, fileName, isUnsaved, onOpenFile,
     <div className="flex flex-col w-64 bg-slate-900 text-white shadow-2xl h-full p-4 flex-shrink-0 z-20">
       <div className="flex items-center space-x-3 p-3 mb-8 border-b border-slate-700">
         <div className="bg-emerald-500/20 p-2 rounded-lg"><Users className="w-6 h-6 text-emerald-400" /></div>
-        <div><h1 className="text-lg font-bold tracking-wider">工程管理</h1><span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400 border border-slate-600">CPM V1.3</span></div>
+        <div><h1 className="text-lg font-bold tracking-wider">工程管理</h1><span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400 border border-slate-600">CPM V2.0</span></div>
       </div>
 
       <div className="mb-6 p-4 bg-slate-800 rounded-xl border border-slate-700">
@@ -902,6 +1036,13 @@ const App = () => {
   const [editingProject, setEditingProject] = useState(null);
 
   useEffect(() => {
+    if (!document.querySelector('#sheetjs-cdn')) {
+      const script = document.createElement('script');
+      script.id = 'sheetjs-cdn';
+      script.src = "https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
     if (!document.querySelector('#tailwind-cdn')) {
       const script = document.createElement('script');
       script.id = 'tailwind-cdn';
